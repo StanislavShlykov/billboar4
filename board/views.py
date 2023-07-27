@@ -10,11 +10,13 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from .forms import PostForm, ResponseForm
 from django.urls import reverse_lazy
 from taskboard.tasks import mail_new, hello
+from django.core.mail import send_mail
+from billboard.settings import DEFAULT_FROM_EMAIL
+from django.template.loader import render_to_string
 
 
 # Create your views here.
 def content(request):
-    hello.delay()
     return render(request, 'flatpages/main.html')
 
 
@@ -82,6 +84,23 @@ class PostCreate(LoginRequiredMixin, CreateView):
         category_id = request.POST.getlist('category')
         for cat in category_id:
             post.category.add(Category.objects.get(pk=cat))
+
+        subs_email = []
+        for categ in post.category.all():
+            subs_users = categ.users.all()
+            for s_users in subs_users:
+                subs_email.append(s_users.email)
+        news = post
+        html_content = render_to_string('sign/hello.html', {'news': news})
+        send_mail(
+            subject=f'новая статья {news.post_name}',
+            message=None,
+            from_email=DEFAULT_FROM_EMAIL,
+            recipient_list=subs_email,
+            html_message=html_content,
+            fail_silently=True
+        )
+
         return HttpResponseRedirect('/posts/')
 
     def form_valid(self, form):
