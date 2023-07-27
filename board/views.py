@@ -17,6 +17,7 @@ from django.template.loader import render_to_string
 
 # Create your views here.
 def content(request):
+    hello.delay()
     return render(request, 'flatpages/main.html')
 
 
